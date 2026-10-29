@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional
 from simulator.loaders import day_input_paths
 
 
+def to_minutes(clock: str) -> float:
+    """Convert an "HH:MM" string to minutes after midnight: "14:30" -> 870.0."""
+
+    hours, minutes = clock.split(":")
+    return int(hours) * 60.0 + int(minutes)
+
+
 def calculate_metrics(
     parcels: List[Dict[str, str]],
     distances: List[Dict[str, str]],
@@ -24,12 +31,44 @@ def calculate_metrics(
     midnight: "17:00" is 17 * 60 = 1020.
     """
 
-    # Illustration only: replace or extend this with your chosen metric.
-    number_of_trips = 0
+    # parcel_id -> (window start, window end) in minutes, for O(1) lookup per delivery.
+    windows = {
+        row["parcel_id"]: (to_minutes(row["delivery_window_start"]),
+                           to_minutes(row["delivery_window_end"]))
+        for row in parcels
+    }
+
+    on_time = early = late = trips = 0
+    total_lateness = 0.0
     for event in events:
         if event["event_type"] == "hub_departure":
-            number_of_trips += 1
-    return {"number_of_trips": number_of_trips}
+            trips += 1
+        elif event["event_type"] == "delivery":
+            start, end = windows[event["parcel_id"]]
+            if event["time"] < start:
+                early += 1
+            elif event["time"] <= end:
+                # Both window edges count as on time.
+                on_time += 1
+            else:
+                late += 1
+                total_lateness += event["time"] - end
+
+    total = len(parcels)
+    delivered = on_time + early + late
+    return {
+        "on_time_rate": on_time / total if total else 0.0,
+        "delivery_rate": delivered / total if total else 0.0,
+        # Averaged over late parcels only, so on-time parcels don't dilute it.
+        "avg_lateness_min": total_lateness / late if late else 0.0,
+        "total_parcels": total,
+        "delivered": delivered,
+        "on_time": on_time,
+        "early": early,
+        "late": late,
+        "undelivered": total - delivered,
+        "trips": trips,
+    }
 
 
 def main(argv: Optional[List[str]] = None) -> int:
