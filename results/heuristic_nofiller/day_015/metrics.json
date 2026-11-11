@@ -1,0 +1,12 @@
+{
+  "on_time_rate": 0.8567839195979899,
+  "delivery_rate": 0.8567839195979899,
+  "avg_lateness_min": 0.0,
+  "total_parcels": 796,
+  "delivered": 682,
+  "on_time": 682,
+  "early": 0,
+  "late": 0,
+  "undelivered": 114,
+  "trips": 33
+}
