@@ -1,6 +1,7 @@
 """Timed combined policy: send a vehicle only when a load is due or full, and keep the fleet home for future windows."""
 
 import heapq
+import math
 from typing import Dict, List
 
 from simulator.models import Parcel, SimulationContext
@@ -91,11 +92,13 @@ def plan_trip(
     if urgent:
         seed = parcel[urgent_id]["delivery_location_id"]
     else:
-        load_at = {loc: sum(parcel[p]["size"] for p in ids) for loc, ids in ready.items()}
+        # math.fsum is exactly rounded, so the result is the same on every Python version
+        # (plain sum() of floats changed in Python 3.12).
+        load_at = {loc: math.fsum(parcel[p]["size"] for p in ids) for loc, ids in ready.items()}
         best_key = None
         seed = None
         for loc in load_at:
-            cluster = sum(v for other, v in load_at.items() if distances[loc][other] <= radius)
+            cluster = math.fsum(v for other, v in load_at.items() if distances[loc][other] <= radius)
             key = (-cluster, distances[HUB][loc], loc)
             if best_key is None or key < best_key:
                 best_key, seed = key, loc
